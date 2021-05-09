@@ -1,33 +1,3 @@
-Skip to content
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
- 
-@teenabodhwani 
-Ritesh-globant
-/
-Lamda-demo
-1
-00
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security
-Insights
-Lamda-demo/index.js /
-@Ritesh-globant
-Ritesh-globant Update index.js
-Latest commit ea10a1b 12 days ago
- History
- 1 contributor
-148 lines (140 sloc)  4.12 KB
-  
 const AWS = require('aws-sdk');
 AWS.config.update( {
   region: 'ap-south-1'
@@ -176,16 +146,3 @@ function buildResponse(statusCode, body) {
     body: JSON.stringify(body)
   }
 }
-© 2021 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Docs
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
-Loading complete
