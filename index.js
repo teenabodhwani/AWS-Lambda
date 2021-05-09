@@ -1,0 +1,191 @@
+Skip to content
+Search or jump to…
+
+Pull requests
+Issues
+Marketplace
+Explore
+ 
+@teenabodhwani 
+Ritesh-globant
+/
+Lamda-demo
+1
+00
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Lamda-demo/index.js /
+@Ritesh-globant
+Ritesh-globant Update index.js
+Latest commit ea10a1b 12 days ago
+ History
+ 1 contributor
+148 lines (140 sloc)  4.12 KB
+  
+const AWS = require('aws-sdk');
+AWS.config.update( {
+  region: 'ap-south-1'
+});
+const dynamodb = new AWS.DynamoDB.DocumentClient();
+const dynamodbTableName = 'employee-data';
+const statusCheck = '/status';
+const employeeRecord = '/record';
+const employeeAllRecord = '/complete';
+
+exports.handler = async function(event) {
+  console.log('Request event: ', event);
+  let response;
+  switch(true) {
+    case event.httpMethod === 'GET' && event.path === statusCheck:
+      response = buildResponse(200);
+      break;
+    case event.httpMethod === 'GET' && event.path === employeeRecord:
+      response = await getRecord(event.queryStringParameters.employeeId);
+      break;
+    case event.httpMethod === 'GET' && event.path === employeeAllRecord:
+      response = await getAllRecords();
+      break;
+    case event.httpMethod === 'POST' && event.path === employeeRecord:
+      response = await saveProduct(JSON.parse(event.body));
+      break;
+    case event.httpMethod === 'PATCH' && event.path === employeeRecord:
+      const requestBody = JSON.parse(event.body);
+      response = await modifyProduct(requestBody.employeeId, requestBody.updateKey, requestBody.updateValue);
+      break;
+    case event.httpMethod === 'DELETE' && event.path === employeeRecord:
+      response = await deleteRecord(JSON.parse(event.body).employeeId);
+      break;
+    default:
+      response = buildResponse(404, '404 Not Found');
+  }
+  return response;
+}
+
+async function getRecord(employeeId) {
+  const params = {
+    TableName: dynamodbTableName,
+    Key: {
+      'employeeId': employeeId
+    }
+  }
+  return await dynamodb.get(params).promise().then((response) => {
+    return buildResponse(200, response.Item);
+  }, (error) => {
+    console.error('Failed to get employee record with employeeId: ', error);
+  });
+}
+
+async function getAllRecords() {
+  const params = {
+    TableName: dynamodbTableName
+  }
+  const allRecords = await scanDynamoRecords(params, []);
+  const body = {
+    records: allRecords
+  }
+  return buildResponse(200, body);
+}
+
+async function scanDynamoRecords(scanParams, itemArray) {
+  try {
+    const dynamoData = await dynamodb.scan(scanParams).promise();
+    itemArray = itemArray.concat(dynamoData.Items);
+    if (dynamoData.LastEvaluatedKey) {
+      scanParams.ExclusiveStartkey = dynamoData.LastEvaluatedKey;
+      return await scanDynamoRecords(scanParams, itemArray);
+    }
+    return itemArray;
+  } catch(error) {
+    console.error('Failed to get all employee records ', error);
+  }
+}
+
+async function saveProduct(requestBody) {
+  const params = {
+    TableName: dynamodbTableName,
+    Item: requestBody
+  }
+  return await dynamodb.put(params).promise().then(() => {
+    const body = {
+      Operation: 'SAVE',
+      Message: 'SUCCESS',
+      Item: requestBody
+    }
+    return buildResponse(200, body);
+  }, (error) => {
+    console.error('The Post request is unable to save the employee record ', error);
+  })
+}
+
+async function modifyProduct(employeeId, updateKey, updateValue) {
+  const params = {
+    TableName: dynamodbTableName,
+    Key: {
+      'employeeId': employeeId
+    },
+    UpdateExpression: `set ${updateKey} = :value`,
+    ExpressionAttributeValues: {
+      ':value': updateValue
+    },
+    ReturnValues: 'UPDATED_NEW'
+  }
+  return await dynamodb.update(params).promise().then((response) => {
+    const body = {
+      Operation: 'UPDATE',
+      Message: 'SUCCESS',
+      UpdatedAttributes: response
+    }
+    return buildResponse(200, body);
+  }, (error) => {
+    console.error('Failed to modify the employee record ', error);
+  })
+}
+
+async function deleteRecord(employeeId) {
+  const params = {
+    TableName: dynamodbTableName,
+    Key: {
+      'employeeId': employeeId
+    },
+    ReturnValues: 'ALL_OLD'
+  }
+  return await dynamodb.delete(params).promise().then((response) => {
+    const body = {
+      Operation: 'DELETE',
+      Message: 'SUCCESS',
+      Item: response
+    }
+    return buildResponse(200, body);
+  }, (error) => {
+    console.error('Failed to delete the employee data', error);
+  })
+}
+
+function buildResponse(statusCode, body) {
+  return {
+    statusCode: statusCode,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  }
+}
+© 2021 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Loading complete
